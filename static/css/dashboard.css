@@ -1,0 +1,86 @@
+/* ============================================================
+   EIDS — dashboard.css  |  Dashboard page styles
+   ============================================================ */
+
+/* ── Status grid ── */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.status-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  transition: border-color var(--transition), transform var(--transition);
+  text-decoration: none;
+  color: inherit;
+}
+.status-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.status-card .label {
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.status-card .title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+.status-card .desc { font-size: .83rem; color: var(--muted); line-height: 1.5; }
+
+/* ── Module grid ── */
+.module-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+
+.module-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.8rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  transition: border-color var(--transition);
+}
+.module-card:hover { border-color: rgba(0, 212, 170, .4); }
+
+.module-tag {
+  font-family: var(--mono);
+  font-size: .7rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.module-card h2 { font-size: 1.1rem; font-weight: 700; }
+.module-card p  { font-size: .84rem; color: var(--muted); line-height: 1.6; }
+
+/* ── Feature list ── */
+.feature-list { list-style: none; }
+.feature-list li {
+  font-size: .82rem;
+  color: var(--muted);
+  padding: .25rem 0;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.feature-list li::before { content: '→'; color: var(--accent); }
+
+/* ── Responsive ── */
+@media (max-width: 700px) { .module-grid { grid-template-columns: 1fr; } }

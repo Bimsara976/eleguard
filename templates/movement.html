@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Movement Prediction{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Elephant Movement &amp; Intrusion Prediction</h1>
+  <p>Predict the 60-minute boundary-crossing risk and unsupervised movement state using GPS-derived kinematic features (Component 4).</p>
+</div>
+
+<div class="card">
+  <div class="card-title">🛰 Kinematic &amp; Environmental Inputs</div>
+  <form method="POST">
+    <div class="form-grid">
+
+      <div class="field">
+        <label for="speed_mps">Speed (m/s)</label>
+        <input id="speed_mps" name="speed_mps" type="number" step="any"
+               value="{{ form_values.get('speed_mps', defaults.speed_mps) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="turning_angle_rad">Turning Angle (rad)</label>
+        <input id="turning_angle_rad" name="turning_angle_rad" type="number" step="any"
+               value="{{ form_values.get('turning_angle_rad', defaults.turning_angle_rad) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="step_length_m">Step Length (m)</label>
+        <input id="step_length_m" name="step_length_m" type="number" step="any"
+               value="{{ form_values.get('step_length_m', defaults.step_length_m) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="roll_speed_mean">Rolling Speed Mean (m/s)</label>
+        <input id="roll_speed_mean" name="roll_speed_mean" type="number" step="any"
+               value="{{ form_values.get('roll_speed_mean', defaults.roll_speed_mean) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="roll_speed_std">Rolling Speed Std (m/s)</label>
+        <input id="roll_speed_std" name="roll_speed_std" type="number" step="any"
+               value="{{ form_values.get('roll_speed_std', defaults.roll_speed_std) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="dist_to_boundary_m">Distance to Boundary (m)</label>
+        <input id="dist_to_boundary_m" name="dist_to_boundary_m" type="number" step="any"
+               value="{{ form_values.get('dist_to_boundary_m', defaults.dist_to_boundary_m) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="toward_human_mps">Toward Human Zone (m/s)</label>
+        <input id="toward_human_mps" name="toward_human_mps" type="number" step="any"
+               value="{{ form_values.get('toward_human_mps', defaults.toward_human_mps) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="external-temperature">External Temperature (°C)</label>
+        <input id="external-temperature" name="external-temperature" type="number" step="any"
+               value="{{ form_values.get('external-temperature', defaults['external-temperature']) }}" required />
+      </div>
+
+      <div class="field">
+        <label for="hour">Hour of Day (0–23)</label>
+        <input id="hour" name="hour" type="number" min="0" max="23" step="1"
+               value="{{ form_values.get('hour', defaults.hour) }}" required />
+        <small>hour_sin &amp; hour_cos computed automatically</small>
+      </div>
+
+    </div>
+    <button type="submit" class="btn-primary">▶ Predict Risk &amp; State</button>
+  </form>
+</div>
+
+{% if result %}
+{% set is_danger = result.risk_label == 1 %}
+<div class="result-card {{ 'danger' if is_danger else '' }}">
+  <div class="result-headline">{{ result.risk_text }}</div>
+
+  <div class="result-grid-2">
+
+    <!-- Intrusion risk -->
+    <div class="metric">
+      <div class="metric-val {{ 'danger' if result.risk_prob > 70 else 'warn' if result.risk_prob > 40 else '' }}"
+           data-risk-value="{{ result.risk_prob }}">
+        {{ result.risk_prob }}%
+      </div>
+      <div class="metric-label">Intrusion Risk Probability</div>
+      <div class="prob-bar-wrap">
+        <label><span>Risk</span><span>{{ result.risk_prob }}%</span></label>
+        <div class="prob-bar">
+          <div class="prob-bar-fill {{ 'danger' if result.risk_prob > 70 else 'warn' if result.risk_prob > 40 else '' }}"
+               style="width: 0"
+               data-width="{{ result.risk_prob }}"></div>
+        </div>
+      </div>
+      <div style="font-size:.72rem; color:var(--muted); margin-top:.5rem; font-family:var(--mono);">
+        Threshold: {{ result.threshold }}%
+      </div>
+    </div>
+
+    <!-- Movement state -->
+    <div class="metric">
+      <div class="metric-val" style="font-size:2rem;">{{ result.move_state }}</div>
+      <div class="metric-label">GMM Movement State ID</div>
+      <div class="state-badge">{{ result.state_label }}</div>
+      <div style="font-size:.72rem; color:var(--muted); margin-top:.6rem; font-family:var(--mono);">
+        Unsupervised GMM cluster — lower IDs<br>typically indicate slower movement
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

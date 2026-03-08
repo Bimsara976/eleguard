@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>System Dashboard</h1>
+  <p>Elephant Intrusion Detection System — Smart LoRaWAN IoT Sensor Platform</p>
+</div>
+
+<!-- Status bar -->
+<div class="status-grid">
+  <div class="status-card">
+    <span class="label">Seismic Module</span>
+    <span class="title">
+      <span class="status-dot {{ 'ok' if seismic_ready else 'err' }}"></span>
+      {{ 'Online' if seismic_ready else 'Model Missing' }}
+    </span>
+    <span class="desc">Binary proxy + multiclass vibration classifier</span>
+  </div>
+  <div class="status-card">
+    <span class="label">Movement Module</span>
+    <span class="title">
+      <span class="status-dot {{ 'ok' if movebank_ready else 'err' }}"></span>
+      {{ 'Online' if movebank_ready else 'Model Missing' }}
+    </span>
+    <span class="desc">Intrusion risk + GMM movement state discovery</span>
+  </div>
+  <div class="status-card">
+    <span class="label">Session</span>
+    <span class="title"><span class="status-dot ok"></span>Authenticated</span>
+    <span class="desc">Logged in as <strong>{{ username }}</strong></span>
+  </div>
+</div>
+
+<!-- Module cards -->
+<div class="module-grid">
+
+  <div class="module-card">
+    <span class="module-tag">Component 3 — Seismic Detection</span>
+    <h2>Seismic Vibration Analyser</h2>
+    <p>Classifies geophone vibration windows using machine-learning pipelines trained on the Kaggle geophone sensor dataset.</p>
+    <ul class="feature-list">
+      <li>Multiclass: walking / running / waiting</li>
+      <li>Binary proxy: movement event vs. background</li>
+      <li>11 seismic feature inputs</li>
+    </ul>
+    {% if seismic_meta %}
+    <div class="meta-block">
+      Best multiclass: <span>{{ seismic_meta.get('best_multiclass_model', '—') }}</span><br>
+      Best binary: <span>{{ seismic_meta.get('best_binary_proxy_model', '—') }}</span>
+    </div>
+    {% endif %}
+    <a href="{{ url_for('seismic') }}" class="btn-go">Open →</a>
+  </div>
+
+  <div class="module-card">
+    <span class="module-tag">Component 4 — Movement Prediction</span>
+    <h2>Elephant Movement Predictor</h2>
+    <p>Predicts boundary-crossing risk in a 60-minute horizon and discovers unsupervised movement states via GPS-derived kinematic features.</p>
+    <ul class="feature-list">
+      <li>Supervised intrusion risk classifier (ROC AUC optimised)</li>
+      <li>Unsupervised GMM movement state model</li>
+      <li>10 kinematic + temporal feature inputs</li>
+    </ul>
+    {% if movebank_meta %}
+    <div class="meta-block">
+      Threshold: <span>{{ (movebank_meta.get('threshold', 0.5) * 100)|round(1) }}%</span>
+      &nbsp; Horizon: <span>{{ movebank_meta.get('horizon_min', '—') }} min</span>
+    </div>
+    {% endif %}
+    <a href="{{ url_for('movement') }}" class="btn-go">Open →</a>
+  </div>
+
+</div>
+{% endblock %}

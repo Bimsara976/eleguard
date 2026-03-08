@@ -1,0 +1,413 @@
+/* ============================================================
+   EIDS — Elephant Intrusion Detection System
+   main.css  |  Global styles, layout, nav, cards, forms
+   ============================================================ */
+
+/* ── Variables ── */
+:root {
+  --bg:        #0b0f14;
+  --surface:   #131820;
+  --card:      #1a2230;
+  --border:    #243040;
+  --accent:    #00d4aa;
+  --accent2:   #f59e0b;
+  --danger:    #ef4444;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --mono:      'Space Mono', monospace;
+  --sans:      'Outfit', sans-serif;
+  --radius:    10px;
+  --shadow:    0 24px 80px rgba(0,0,0,.45);
+  --transition: .2s ease;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+nav {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 58px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  backdrop-filter: blur(12px);
+}
+
+.nav-brand {
+  font-family: var(--mono);
+  font-size: .95rem;
+  color: var(--accent);
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  text-decoration: none;
+  transition: opacity var(--transition);
+}
+.nav-brand:hover { opacity: .8; }
+.nav-brand svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+.nav-links {
+  display: flex;
+  gap: 1.6rem;
+  align-items: center;
+}
+.nav-links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: .88rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  transition: color var(--transition);
+  padding: .35rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+}
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.nav-user {
+  font-family: var(--mono);
+  font-size: .78rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: .3rem .85rem;
+  border-radius: 5px;
+  font-size: .78rem;
+  cursor: pointer;
+  font-family: var(--mono);
+  text-decoration: none;
+  transition: border-color var(--transition), color var(--transition);
+}
+.btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ============================================================
+   MAIN CONTENT AREA
+   ============================================================ */
+main {
+  flex: 1;
+  padding: 2.5rem 2rem;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* ── Page header ── */
+.page-header { margin-bottom: 2rem; }
+.page-header h1 { font-size: 1.6rem; font-weight: 700; }
+.page-header p {
+  color: var(--muted);
+  font-size: .9rem;
+  margin-top: .4rem;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   FLASH MESSAGES
+   ============================================================ */
+.flash {
+  background: rgba(239, 68, 68, .1);
+  border: 1px solid var(--danger);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: .75rem 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: .88rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+/* ============================================================
+   CARD
+   ============================================================ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.8rem 2rem;
+  margin-bottom: 1.5rem;
+  transition: border-color var(--transition);
+}
+
+.card-title {
+  font-family: var(--mono);
+  font-size: .8rem;
+  color: var(--accent);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.field { display: flex; flex-direction: column; gap: .4rem; }
+
+.field label {
+  font-size: .76rem;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 5px;
+  padding: .55rem .85rem;
+  font-size: .9rem;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, .1);
+}
+.field small {
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: .15rem;
+}
+
+/* ── Primary button ── */
+.btn-primary {
+  background: var(--accent);
+  color: #0b0f14;
+  border: none;
+  padding: .72rem 2.2rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: .9rem;
+  cursor: pointer;
+  font-family: var(--sans);
+  letter-spacing: .04em;
+  transition: opacity var(--transition), transform .1s, box-shadow var(--transition);
+  margin-top: 1.2rem;
+  box-shadow: 0 4px 20px rgba(0, 212, 170, .2);
+}
+.btn-primary:hover {
+  opacity: .85;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(0, 212, 170, .3);
+}
+.btn-primary:active { transform: translateY(0); }
+
+/* ── Ghost / outline button ── */
+.btn-go {
+  display: inline-block;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: .52rem 1.3rem;
+  border-radius: 6px;
+  font-size: .82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background var(--transition), color var(--transition);
+  align-self: flex-start;
+}
+.btn-go:hover { background: var(--accent); color: #0b0f14; }
+
+/* ============================================================
+   RESULT CARDS
+   ============================================================ */
+.result-card {
+  background: linear-gradient(135deg, #0d2620 0%, #0f1e2c 100%);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1.8rem 2rem;
+  margin-top: 1.5rem;
+  animation: resultFadeIn .4s ease both;
+}
+.result-card.danger {
+  background: linear-gradient(135deg, #200d0d 0%, #1f1010 100%);
+  border-color: var(--danger);
+}
+
+@keyframes resultFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-headline {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.3rem;
+}
+
+.result-grid   { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+.result-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+/* ── Metric tile ── */
+.metric {
+  background: rgba(255, 255, 255, .04);
+  border-radius: 7px;
+  padding: 1.1rem;
+  text-align: center;
+}
+.metric-val {
+  font-family: var(--mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.1;
+}
+.metric-val.danger { color: var(--danger); }
+.metric-val.warn   { color: var(--accent2); }
+.metric-label { font-size: .74rem; color: var(--muted); margin-top: .35rem; }
+
+/* ============================================================
+   PROGRESS / PROBABILITY BAR
+   ============================================================ */
+.prob-bar-wrap { margin-top: .8rem; }
+.prob-bar-wrap label {
+  font-size: .76rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: .35rem;
+}
+.prob-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+.prob-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width .7s cubic-bezier(.4,0,.2,1);
+}
+.prob-bar-fill.danger { background: var(--danger); }
+.prob-bar-fill.warn   { background: var(--accent2); }
+
+.prob-rows { margin-top: 1rem; display: flex; flex-direction: column; gap: .75rem; }
+
+/* ============================================================
+   STATUS DOT
+   ============================================================ */
+.status-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: .4rem;
+  flex-shrink: 0;
+}
+.status-dot.ok   { background: var(--accent);  box-shadow: 0 0 8px rgba(0, 212, 170, .6); }
+.status-dot.warn { background: var(--accent2); box-shadow: 0 0 8px rgba(245, 158, 11, .5); }
+.status-dot.err  { background: var(--danger);  box-shadow: 0 0 8px rgba(239, 68, 68, .5); }
+
+/* ============================================================
+   META / CODE BLOCK
+   ============================================================ */
+.meta-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .9rem 1rem;
+  font-family: var(--mono);
+  font-size: .74rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.meta-block span { color: var(--text); }
+
+/* ============================================================
+   STATE BADGE
+   ============================================================ */
+.state-badge {
+  display: inline-block;
+  background: rgba(0, 212, 170, .1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: .8rem;
+  padding: .3rem .85rem;
+  border-radius: 999px;
+  margin-top: .5rem;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer {
+  text-align: center;
+  padding: 1.4rem;
+  font-family: var(--mono);
+  font-size: .7rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  letter-spacing: .04em;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  nav { padding: 0 1rem; }
+  .nav-links { gap: 1rem; }
+  main { padding: 1.5rem 1rem; }
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .result-grid-2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 500px) {
+  .nav-links { display: none; }
+  .form-grid { grid-template-columns: 1fr; }
+}

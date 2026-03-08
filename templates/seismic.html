@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Seismic Detection{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Seismic Vibration Detection</h1>
+  <p>Enter geophone feature values to run the multiclass activity classifier and the binary seismic intrusion proxy model.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">⚡ Input Features — 11 Seismic Signal Descriptors</div>
+  <form method="POST">
+    <div class="form-grid">
+      {% for col in feature_cols %}
+      <div class="field">
+        <label for="{{ col }}">{{ col.replace('_', ' ') }}</label>
+        <input id="{{ col }}" name="{{ col }}" type="number" step="any"
+               value="{{ form_values.get(col, defaults.get(col, 0)) }}" required />
+      </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-primary">▶ Run Prediction</button>
+  </form>
+</div>
+
+{% if result %}
+{% set is_danger = result.binary_label == 1 %}
+<div class="result-card {{ 'danger' if is_danger else '' }}">
+  <div class="result-headline">{{ result.binary_text }}</div>
+
+  <div class="result-grid-2">
+    <!-- Binary proxy -->
+    <div class="metric">
+      <div class="metric-val {{ 'danger' if is_danger else '' }}"
+           data-risk-value="{{ result.binary_prob }}">
+        {{ result.binary_prob }}%
+      </div>
+      <div class="metric-label">Intrusion Proxy Probability</div>
+      <div class="prob-bar-wrap">
+        <label><span>Probability</span><span>{{ result.binary_prob }}%</span></label>
+        <div class="prob-bar">
+          <div class="prob-bar-fill {{ 'danger' if is_danger else '' }}"
+               style="width: 0"
+               data-width="{{ result.binary_prob }}"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multiclass -->
+    <div class="metric">
+      <div class="metric-val" style="font-size:1.3rem; text-transform:capitalize;">
+        {{ result.multi_label }}
+      </div>
+      <div class="metric-label">Vibration Activity Class</div>
+    </div>
+  </div>
+
+  <!-- Per-class probability bars -->
+  <div class="prob-rows">
+    {% for cls, pct in result.multi_probs.items() %}
+    <div class="prob-bar-wrap">
+      <label>
+        <span style="text-transform:capitalize;">{{ cls }}</span>
+        <span>{{ pct }}%</span>
+      </label>
+      <div class="prob-bar">
+        <div class="prob-bar-fill warn"
+             style="width: 0"
+             data-width="{{ pct }}"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

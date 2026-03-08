@@ -1,0 +1,18 @@
+{
+  "feature_columns": [
+    "mean",
+    "top_3_mean",
+    "min",
+    "max",
+    "std_dev",
+    "median",
+    "q1",
+    "q3",
+    "skewness",
+    "dominant_freq",
+    "energy"
+  ],
+  "best_multiclass_model": "RandomForest",
+  "best_binary_proxy_model": "RandomForest",
+  "note": "Binary model is a movement proxy, not a validated elephant classifier."
+}

@@ -1,0 +1,177 @@
+/* ============================================================
+   EIDS — login.css  |  Login page styles
+   ============================================================ */
+
+/* ── Animated grid background ── */
+body {
+  position: relative;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 212, 170, .04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 170, .04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridShift 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+@keyframes gridShift { to { background-position: 48px 48px; } }
+
+/* ── Glow orb ── */
+body::after {
+  content: '';
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(0, 212, 170, .09) 0%, transparent 70%);
+  top: -100px;
+  left: -100px;
+  pointer-events: none;
+  animation: orbPulse 8s ease-in-out infinite;
+  z-index: 0;
+}
+@keyframes orbPulse {
+  0%, 100% { transform: scale(1);   opacity: .6; }
+  50%       { transform: scale(1.2); opacity: 1; }
+}
+
+/* ── Login wrapper ── */
+.login-wrap {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  padding: 1rem;
+  animation: fadeUp .55s ease both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Brand block ── */
+.brand {
+  text-align: center;
+  margin-bottom: 2.2rem;
+}
+.brand-logo {
+  width: 54px;
+  height: 54px;
+  background: linear-gradient(135deg, var(--accent), #00a07e);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 0 0 40px rgba(0, 212, 170, .28);
+}
+.brand-logo svg { width: 28px; height: 28px; color: #0b0f14; }
+.brand h1 {
+  font-family: var(--mono);
+  font-size: 1.65rem;
+  letter-spacing: .12em;
+  color: var(--accent);
+}
+.brand p {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-top: .45rem;
+  line-height: 1.55;
+  letter-spacing: .02em;
+}
+
+/* ── Login card ── */
+.login-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2.2rem;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+}
+
+/* ── Error block ── */
+.error-msg {
+  background: rgba(239, 68, 68, .1);
+  border: 1px solid rgba(239, 68, 68, .4);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: .65rem 1rem;
+  font-size: .83rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* ── Fields override for login ── */
+.login-card .field { margin-bottom: 1.1rem; }
+.login-card .field label {
+  display: block;
+  text-transform: uppercase;
+  font-size: .74rem;
+  letter-spacing: .08em;
+  font-family: var(--mono);
+  color: var(--muted);
+  margin-bottom: .45rem;
+}
+.login-card .field input {
+  font-family: var(--sans);
+  font-size: .95rem;
+  padding: .72rem 1rem;
+  border-radius: 6px;
+}
+.login-card .field input:focus {
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, .12);
+}
+
+/* ── Submit button ── */
+.btn-submit {
+  width: 100%;
+  background: var(--accent);
+  color: #0b0f14;
+  border: none;
+  padding: .82rem;
+  border-radius: 7px;
+  font-weight: 700;
+  font-size: .95rem;
+  cursor: pointer;
+  font-family: var(--sans);
+  letter-spacing: .05em;
+  margin-top: .4rem;
+  transition: opacity var(--transition), transform .1s, box-shadow var(--transition);
+  box-shadow: 0 4px 20px rgba(0, 212, 170, .25);
+}
+.btn-submit:hover {
+  opacity: .88;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(0, 212, 170, .3);
+}
+.btn-submit:active { transform: translateY(0); }
+
+/* ── Hint text ── */
+.hint {
+  text-align: center;
+  font-size: .72rem;
+  color: var(--muted);
+  margin-top: 1.4rem;
+  font-family: var(--mono);
+  letter-spacing: .04em;
+}
+
+/* ── Page footer ── */
+.login-footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-family: var(--mono);
+  font-size: .68rem;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
