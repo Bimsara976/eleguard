@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}EIDS{% endblock %} — Elephant Intrusion Detection</title>
+  <title>{% block title %}Eleguard{% endblock %} — Elephant Intrusion Detection</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -15,17 +15,15 @@
 <nav>
   <a class="nav-brand" href="{{ url_for('dashboard') }}">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-      <path d="M8 14s1.5-2 4-2 4 2 4 2"/>
-      <line x1="9"  y1="9"  x2="9.01"  y2="9"/>
-      <line x1="15" y1="9"  x2="15.01" y2="9"/>
+      <path d="M4 14c2-1 3-3 3-6 3 0 5 1 6 3 1-2 3-3 6-3 0 3 1 5 3 6-1 5-5 8-9 8s-8-3-9-8Z"/>
+      <path d="M12 11v10"/>
     </svg>
-    EIDS
+    EleguardF
   </a>
   <div class="nav-links">
-    <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
-    <a href="{{ url_for('seismic') }}"   {% if request.endpoint == 'seismic'   %}class="active"{% endif %}>Seismic Detection</a>
-    <a href="{{ url_for('movement') }}"  {% if request.endpoint == 'movement'  %}class="active"{% endif %}>Movement Prediction</a>
+    <a href="{{ url_for('dashboard') }}" {% if request.endpoint=='dashboard' %}class="active"{% endif %}>Live Dashboard</a>
+    <a href="{{ url_for('seismic') }}"   {% if request.endpoint=='seismic'   %}class="active"{% endif %}>Seismic</a>
+    <a href="{{ url_for('movement') }}"  {% if request.endpoint=='movement'  %}class="active"{% endif %}>Movement</a>
   </div>
   <div class="nav-user">
     <span>{{ session.username }}</span>
@@ -48,7 +46,7 @@
   {% block content %}{% endblock %}
 </main>
 
-<footer>EIDS v1.0 &nbsp;·&nbsp; Smart Detection of Elephant Intrusions Using LoRaWAN-Enabled IoT Sensors &nbsp;·&nbsp; 25-26J-015</footer>
+<footer>EleguardF v1.0 &nbsp;·&nbsp; Smart Elephant Intrusion Detection · LoRaWAN IoT &nbsp;·&nbsp; 25-26J-015</footer>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% block extra_js %}{% endblock %}

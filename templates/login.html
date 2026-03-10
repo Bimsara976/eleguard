@@ -3,28 +3,24 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>EIDS — Sign In</title>
+  <title>Eleguard — Sign In</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
 <body>
-
   <div class="login-wrap">
     <div class="brand">
       <div class="brand-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-          <path d="M8 14s1.5-2 4-2 4 2 4 2"/>
-          <line x1="9"  y1="9"  x2="9.01"  y2="9"/>
-          <line x1="15" y1="9"  x2="15.01" y2="9"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28">
+          <path d="M4 14c2-1 3-3 3-6 3 0 5 1 6 3 1-2 3-3 6-3 0 3 1 5 3 6-1 5-5 8-9 8s-8-3-9-8Z"/>
+          <path d="M12 11v10"/>
         </svg>
       </div>
-      <h1>EIDS</h1>
+      <h1>Eleguard</h1>
       <p>Elephant Intrusion Detection System<br>25-26J-015</p>
     </div>
-
     <div class="login-card">
       {% if error %}
         <div class="error-msg">
@@ -34,27 +30,21 @@
           {{ error }}
         </div>
       {% endif %}
-
       <form method="POST">
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" name="username" type="text"
-                 autocomplete="username" required placeholder="Enter username"/>
+          <input id="username" name="username" type="text" autocomplete="username" required placeholder="Enter username"/>
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input id="password" name="password" type="password"
-                 autocomplete="current-password" required placeholder="Enter password"/>
+          <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Enter password"/>
         </div>
         <button type="submit" class="btn-submit">Sign In →</button>
       </form>
-
       <p class="hint">Authorised personnel only</p>
     </div>
-
-    <p class="login-footer">EIDS v1.0 &nbsp;·&nbsp; Smart LoRaWAN IoT Sensor System</p>
+    <p class="login-footer">EleguardF v1.0 &nbsp;·&nbsp; Smart LoRaWAN IoT Sensor System</p>
   </div>
-
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

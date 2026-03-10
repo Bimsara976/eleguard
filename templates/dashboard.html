@@ -1,79 +1,841 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Live Dashboard{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  /* ── Tailwind-compatible overrides ── */
+  body { background: #020617; font-family: 'Outfit', sans-serif; display:block; }
+  main { max-width:none; padding:0; }
+  nav  { display:none; }
+  footer { display:none; }
+
+  /* ── Eleguard nav ── */
+  #eg-nav {
+    position: sticky; top:0; z-index:50;
+    background: rgba(2,6,23,0.80);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(148,163,184,0.15);
+  }
+
+  /* ── Alert popup ── */
+  #alertPopup {
+    position: fixed; inset:0; z-index:9999;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(0,0,0,0);
+    pointer-events: none;
+    transition: background .35s;
+  }
+  #alertPopup.visible {
+    background: rgba(0,0,0,0.65);
+    pointer-events: all;
+  }
+  #alertBox {
+    background: linear-gradient(135deg, #1a0a0a 0%, #0f1420 100%);
+    border: 1.5px solid rgba(248,113,113,0.6);
+    border-radius: 18px;
+    padding: 2.2rem 2.4rem;
+    max-width: 440px; width:90%;
+    box-shadow: 0 0 80px rgba(239,68,68,0.35), 0 24px 80px rgba(0,0,0,0.8);
+    transform: scale(.88) translateY(24px);
+    opacity: 0;
+    transition: transform .4s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
+  }
+  #alertPopup.visible #alertBox {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  /* pulsing ring around icon */
+  @keyframes pulseRing {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,.6); }
+    70%  { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+  #alertIcon { animation: pulseRing 1.4s infinite; }
+
+  /* slide-in for new alert rows */
+  @keyframes slideIn {
+    from { opacity:0; transform:translateY(-8px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .alert-row-new { animation: slideIn .35s ease both; }
+
+  /* signal timeline flash */
+  @keyframes flashNode {
+    0%,100% { opacity:1; }
+    50%      { opacity:.3; }
+  }
+  .node-flash { animation: flashNode .5s ease 3; }
+
+  /* card border */
+  .eg-card { border: 1px solid rgba(148,163,184,0.18); }
+  .mono     { font-family: 'Space Mono', monospace; }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>System Dashboard</h1>
-  <p>Elephant Intrusion Detection System — Smart LoRaWAN IoT Sensor Platform</p>
-</div>
 
-<!-- Status bar -->
-<div class="status-grid">
-  <div class="status-card">
-    <span class="label">Seismic Module</span>
-    <span class="title">
-      <span class="status-dot {{ 'ok' if seismic_ready else 'err' }}"></span>
-      {{ 'Online' if seismic_ready else 'Model Missing' }}
-    </span>
-    <span class="desc">Binary proxy + multiclass vibration classifier</span>
-  </div>
-  <div class="status-card">
-    <span class="label">Movement Module</span>
-    <span class="title">
-      <span class="status-dot {{ 'ok' if movebank_ready else 'err' }}"></span>
-      {{ 'Online' if movebank_ready else 'Model Missing' }}
-    </span>
-    <span class="desc">Intrusion risk + GMM movement state discovery</span>
-  </div>
-  <div class="status-card">
-    <span class="label">Session</span>
-    <span class="title"><span class="status-dot ok"></span>Authenticated</span>
-    <span class="desc">Logged in as <strong>{{ username }}</strong></span>
-  </div>
-</div>
-
-<!-- Module cards -->
-<div class="module-grid">
-
-  <div class="module-card">
-    <span class="module-tag">Component 3 — Seismic Detection</span>
-    <h2>Seismic Vibration Analyser</h2>
-    <p>Classifies geophone vibration windows using machine-learning pipelines trained on the Kaggle geophone sensor dataset.</p>
-    <ul class="feature-list">
-      <li>Multiclass: walking / running / waiting</li>
-      <li>Binary proxy: movement event vs. background</li>
-      <li>11 seismic feature inputs</li>
-    </ul>
-    {% if seismic_meta %}
-    <div class="meta-block">
-      Best multiclass: <span>{{ seismic_meta.get('best_multiclass_model', '—') }}</span><br>
-      Best binary: <span>{{ seismic_meta.get('best_binary_proxy_model', '—') }}</span>
+<!-- ── Eleguard top bar ── -->
+<header id="eg-nav">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-xl bg-emerald-500/15 border border-emerald-400/25 flex items-center justify-center">
+        <svg class="h-6 w-6 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 14c2-1 3-3 3-6 3 0 5 1 6 3 1-2 3-3 6-3 0 3 1 5 3 6-1 5-5 8-9 8s-8-3-9-8Z"/>
+          <path d="M12 11v10"/>
+        </svg>
+      </div>
+      <div>
+        <div class="text-lg font-semibold leading-tight text-slate-100">EleguardF</div>
+        <div class="text-xs text-slate-400">Live Elephant Intrusion Dashboard · 25-26J-015</div>
+      </div>
     </div>
-    {% endif %}
-    <a href="{{ url_for('seismic') }}" class="btn-go">Open →</a>
-  </div>
 
-  <div class="module-card">
-    <span class="module-tag">Component 4 — Movement Prediction</span>
-    <h2>Elephant Movement Predictor</h2>
-    <p>Predicts boundary-crossing risk in a 60-minute horizon and discovers unsupervised movement states via GPS-derived kinematic features.</p>
-    <ul class="feature-list">
-      <li>Supervised intrusion risk classifier (ROC AUC optimised)</li>
-      <li>Unsupervised GMM movement state model</li>
-      <li>10 kinematic + temporal feature inputs</li>
-    </ul>
-    {% if movebank_meta %}
-    <div class="meta-block">
-      Threshold: <span>{{ (movebank_meta.get('threshold', 0.5) * 100)|round(1) }}%</span>
-      &nbsp; Horizon: <span>{{ movebank_meta.get('horizon_min', '—') }} min</span>
+    <div class="flex items-center gap-2">
+      <div class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl eg-card bg-slate-900/40">
+        <span id="sseStatus" class="h-2 w-2 rounded-full bg-amber-400 transition-colors"></span>
+        <span id="sseLabel" class="text-sm text-slate-200">Connecting…</span>
+        <span class="text-xs text-slate-500">|</span>
+        <span id="clock" class="text-xs text-slate-400 mono"></span>
+      </div>
+      <a href="{{ url_for('seismic') }}"
+         class="px-3 py-2 rounded-xl bg-slate-900/60 eg-card hover:bg-slate-800 transition text-sm text-slate-200">
+        Seismic
+      </a>
+      <a href="{{ url_for('movement') }}"
+         class="px-3 py-2 rounded-xl bg-slate-900/60 eg-card hover:bg-slate-800 transition text-sm text-slate-200">
+        Movement
+      </a>
+      <button id="btnExport"
+        class="px-3 py-2 rounded-xl bg-slate-900/60 eg-card hover:bg-slate-800 transition text-sm text-slate-200">
+        Export CSV
+      </button>
+      <a href="{{ url_for('logout') }}"
+         class="px-3 py-2 rounded-xl bg-slate-900/60 eg-card hover:bg-slate-800 transition text-sm text-slate-400">
+        {{ session.username }} ↩
+      </a>
     </div>
-    {% endif %}
-    <a href="{{ url_for('movement') }}" class="btn-go">Open →</a>
   </div>
+</header>
 
+<!-- ══════════════════════════════════════════════════
+     INTRUSION ALERT POPUP
+══════════════════════════════════════════════════ -->
+<div id="alertPopup">
+  <div id="alertBox">
+    <div class="flex items-start gap-4">
+      <div id="alertIcon"
+           class="flex-shrink-0 h-12 w-12 rounded-full bg-rose-500/20 border border-rose-400/50
+                  flex items-center justify-center">
+        <svg class="h-7 w-7 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="flex-1">
+        <div class="text-rose-300 font-bold text-lg tracking-wide">🚨 INTRUSION DETECTED</div>
+        <div class="text-slate-300 text-sm mt-1">Elephant boundary breach suspected</div>
+        <div class="mt-3 space-y-1.5 text-sm">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Node</span>
+            <span class="mono text-slate-100" id="popNode">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Fusion Score</span>
+            <span class="mono text-rose-300 font-bold" id="popFusion">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Seismic</span>
+            <span class="mono text-slate-200" id="popSeismic">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Thermal</span>
+            <span class="mono text-slate-200" id="popThermal">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">PIR Motion</span>
+            <span class="mono text-slate-200" id="popPir">—</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Time</span>
+            <span class="mono text-slate-400 text-xs" id="popTs">—</span>
+          </div>
+        </div>
+        <div class="mt-3 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+          <div id="popBar" class="h-1.5 bg-rose-500 transition-all duration-700" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-5 flex gap-3">
+      <button id="popConfirm"
+        class="flex-1 py-2.5 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-400 transition text-sm">
+        Confirm Alert
+      </button>
+      <button id="popDismiss"
+        class="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 transition text-sm eg-card">
+        Dismiss
+      </button>
+    </div>
+  </div>
 </div>
+
+<!-- ── Main content ── -->
+<div class="max-w-7xl mx-auto px-4 py-6 text-slate-100">
+
+  <!-- KPI Cards -->
+  <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="rounded-2xl p-4 bg-slate-900/40 eg-card">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-400">Active Nodes</div>
+        <div class="text-xs text-slate-400 mono" id="nodesUpdated">—</div>
+      </div>
+      <div class="mt-2 flex items-end justify-between">
+        <div class="text-3xl font-semibold" id="kpiNodes">—</div>
+        <div class="text-xs text-slate-400">LoRa link OK ≥ 80%</div>
+      </div>
+      <div class="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden">
+        <div id="kpiNodesBar" class="h-2 bg-emerald-400 transition-all duration-700" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="rounded-2xl p-4 bg-slate-900/40 eg-card">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-400">Alerts (session)</div>
+        <div class="text-xs text-slate-400 mono" id="alertsUpdated">—</div>
+      </div>
+      <div class="mt-2 flex items-end justify-between">
+        <div class="text-3xl font-semibold" id="kpiAlerts">0</div>
+        <div class="text-xs text-slate-400">Confirmed vs suspected</div>
+      </div>
+      <div class="mt-3 flex gap-2 text-xs">
+        <span class="px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/25 text-emerald-200" id="kpiConfirmed">Confirmed: 0</span>
+        <span class="px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-400/25 text-amber-200"  id="kpiSuspected">Suspected: 0</span>
+      </div>
+    </div>
+
+    <div class="rounded-2xl p-4 bg-slate-900/40 eg-card">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-400">Last Fusion Score</div>
+        <div class="text-xs text-slate-400 mono" id="fusionUpdated">—</div>
+      </div>
+      <div class="mt-2 flex items-end justify-between">
+        <div class="text-3xl font-semibold" id="kpiFusion">—</div>
+        <div class="text-xs text-slate-400">Seismic+Thermal+PIR</div>
+      </div>
+      <div class="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden">
+        <div id="kpiFusionBar" class="h-2 bg-sky-400 transition-all duration-700" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="rounded-2xl p-4 bg-slate-900/40 eg-card">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-400">Last Signal Node</div>
+        <div class="text-xs text-slate-400 mono" id="gwUpdated">—</div>
+      </div>
+      <div class="mt-2 flex items-end justify-between">
+        <div class="text-3xl font-semibold mono" id="kpiNode">—</div>
+        <div class="text-xs text-slate-400">ESP8266 LoRa</div>
+      </div>
+      <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+        <div class="mono" id="gwRssi">RSSI: — dBm</div>
+        <div class="mono" id="gwBatt">Battery: —%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Map + Alerts -->
+  <section class="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-4">
+    <!-- Map -->
+    <div class="xl:col-span-7 rounded-2xl bg-slate-900/40 eg-card overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between gap-3">
+        <div>
+          <div class="font-semibold">Boundary Map</div>
+          <div class="text-xs text-slate-400">Farm perimeter · live ESP8266 node markers</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="siteSelect" class="bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-slate-200">
+            <option value="galgamuwa">Galgamuwa</option>
+            <option value="habanara">Habarana</option>
+            <option value="buttala">Buttala</option>
+          </select>
+          <button id="btnCenter" class="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-700 hover:border-slate-500 transition text-sm text-slate-200">Center</button>
+        </div>
+      </div>
+      <div class="p-4">
+        <div class="relative rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden" style="height:420px">
+          <svg id="mapSvg" viewBox="0 0 1000 700" class="absolute inset-0 w-full h-full">
+            <defs>
+              <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#0b1220"/>
+                <stop offset="1" stop-color="#020617"/>
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width="1000" height="700" fill="url(#g1)"/>
+            <!-- forest blocks -->
+            <path d="M0 420 C 180 350, 260 520, 420 470 C 560 420, 620 520, 780 480 C 900 460, 940 520, 1000 510 L 1000 700 L 0 700 Z"
+                  fill="rgba(16,185,129,0.08)"/>
+            <path d="M0 0 L 1000 0 L 1000 240 C 820 260, 690 140, 520 190 C 360 240, 220 120, 0 160 Z"
+                  fill="rgba(56,189,248,0.06)"/>
+            <!-- boundary -->
+            <path id="boundaryPath"
+                  d="M60 360 C 190 310, 300 420, 420 380 C 560 330, 670 420, 820 380 C 900 355, 940 400, 970 420"
+                  fill="none" stroke="rgba(251,191,36,0.85)" stroke-width="5" stroke-dasharray="10 10"/>
+            <!-- corridor -->
+            <path d="M140 560 C 240 520, 300 540, 380 520 C 520 480, 580 560, 700 540 C 820 520, 880 560, 920 600"
+                  fill="none" stroke="rgba(148,163,184,0.35)" stroke-width="4"/>
+            <g id="markerLayer"></g>
+          </svg>
+          <!-- Legend -->
+          <div class="absolute bottom-3 left-3 rounded-xl bg-slate-950/80 border border-slate-800 px-3 py-2 text-xs text-slate-200">
+            <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-emerald-400"></span> Node OK</div>
+            <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-400"></span> Node Warning</div>
+            <div class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-rose-400"></span> Intrusion Alert</div>
+            <div class="mt-2 text-slate-400">Dashed: boundary</div>
+          </div>
+          <!-- Tooltip -->
+          <div id="mapTip" class="hidden absolute pointer-events-none rounded-xl bg-slate-950 border border-slate-700 px-3 py-2 text-xs">
+            <div class="font-semibold" id="tipTitle">Node</div>
+            <div class="text-slate-400 mono" id="tipBody">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Alerts + Fusion -->
+    <div class="xl:col-span-5 grid grid-cols-1 gap-4">
+
+      <!-- Live Alerts queue -->
+      <div class="rounded-2xl bg-slate-900/40 eg-card overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <div class="font-semibold">Live Alerts</div>
+            <div class="text-xs text-slate-400">ESP8266 real-time signals</div>
+          </div>
+          <button id="btnClearAlerts" class="text-sm px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-700 hover:border-slate-500 transition text-slate-200">Clear</button>
+        </div>
+        <div id="alertsList" class="p-4 space-y-3">
+          <div class="text-sm text-slate-400">Waiting for ESP8266 signals…</div>
+        </div>
+      </div>
+
+      <!-- Fusion readout -->
+      <div class="rounded-2xl bg-slate-900/40 eg-card overflow-hidden">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <div class="font-semibold">Last Fusion Decision</div>
+            <div class="text-xs text-slate-400">Seismic + PIR + Thermal from ESP8266</div>
+          </div>
+          <span id="decisionBadge" class="px-2 py-1 rounded-lg text-xs border border-slate-600 text-slate-300">—</span>
+        </div>
+        <div class="p-4 space-y-3">
+          <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3 grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs text-slate-400">Seismic</div>
+              <div class="mt-1 text-xl font-semibold mono" id="readSeismic">—</div>
+              <div class="mt-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div id="readSeismicBar" class="h-1.5 bg-emerald-400 transition-all" style="width:0%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400">Thermal</div>
+              <div class="mt-1 text-xl font-semibold mono" id="readThermal">—</div>
+              <div class="mt-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                <div id="readThermalBar" class="h-1.5 bg-sky-400 transition-all" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3 flex items-center justify-between">
+            <span class="text-sm text-slate-200">PIR Motion</span>
+            <span id="readPir" class="mono text-sm font-semibold text-slate-300">—</span>
+          </div>
+          <div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3">
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="text-xs text-slate-400">Fusion Score</div>
+                <div class="text-2xl font-semibold" id="readFusion">—</div>
+              </div>
+              <span id="readStatus" class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-700 text-slate-300">—</span>
+            </div>
+            <div class="mt-3 h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div id="readFusionBar" class="h-2 bg-emerald-400 transition-all duration-700" style="width:0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Charts -->
+  <section class="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-4">
+    <div class="xl:col-span-7 rounded-2xl bg-slate-900/40 eg-card overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <div class="font-semibold">Signals Timeline</div>
+          <div class="text-xs text-slate-400">Live from ESP8266 nodes</div>
+        </div>
+        <div class="text-xs text-slate-400 mono" id="chartUpdated">—</div>
+      </div>
+      <div class="p-4"><canvas id="lineChart" height="120"></canvas></div>
+    </div>
+
+    <div class="xl:col-span-5 rounded-2xl bg-slate-900/40 eg-card overflow-hidden">
+      <div class="p-4 border-b border-slate-800">
+        <div class="font-semibold">Node Health</div>
+        <div class="text-xs text-slate-400">Battery and link quality</div>
+      </div>
+      <div class="p-4"><canvas id="barChart" height="140"></canvas></div>
+    </div>
+  </section>
+
+  <!-- Event log table -->
+  <section class="mt-6">
+    <div class="rounded-2xl bg-slate-900/40 eg-card overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <div class="font-semibold">Event Log</div>
+          <div class="text-xs text-slate-400">All ESP8266 detections</div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input id="search" class="w-full sm:w-64 bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-slate-200" placeholder="Search node, status…"/>
+          <select id="filterStatus" class="bg-slate-950/70 border border-slate-700 rounded-xl px-3 py-2 text-sm outline-none text-slate-200">
+            <option value="all">All</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="suspected">Suspected</option>
+            <option value="cleared">Cleared</option>
+          </select>
+        </div>
+      </div>
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-950/60 text-slate-300">
+            <tr class="text-left">
+              <th class="px-4 py-3">Time</th>
+              <th class="px-4 py-3">Node</th>
+              <th class="px-4 py-3">Seismic</th>
+              <th class="px-4 py-3">Thermal</th>
+              <th class="px-4 py-3">Fusion</th>
+              <th class="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody id="eventsTbody" class="divide-y divide-slate-800">
+            <tr><td colspan="6" class="px-4 py-4 text-slate-400">No signals received yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="mt-10 pb-10 text-xs text-slate-500">
+    EleguardF v1.0 · Smart Elephant Intrusion Detection · LoRaWAN IoT Platform · 25-26J-015
+  </footer>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ══════════════════════════════════════════════════════════
+//  EleguardF Dashboard — Live SSE + Alert Popup
+// ══════════════════════════════════════════════════════════
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const pad   = n => String(n).padStart(2,"0");
+function nowStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} `
+       + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// ── State ──────────────────────────────────────────────────
+let state = {
+  nodes:     {{ nodes_json|safe }},
+  signals:   {{ recent_json|safe }},
+  alerts:    [],
+  confirmed: 0,
+  suspected: 0,
+};
+
+// chart data windows
+const WINDOW = 20;
+let chartLabels  = Array.from({length:WINDOW}, (_,i)=>`t-${WINDOW-1-i}`);
+let chartSeismic = Array.from({length:WINDOW}, ()=>0);
+let chartThermal = Array.from({length:WINDOW}, ()=>0);
+let chartFusion  = Array.from({length:WINDOW}, ()=>0);
+
+// ── Clock ──────────────────────────────────────────────────
+setInterval(() => { $("clock").textContent = nowStr(); }, 1000);
+$("clock").textContent = nowStr();
+
+// ── Map ───────────────────────────────────────────────────
+function markerColor(status) {
+  if (status === "alert") return "rgba(248,113,133,0.95)";
+  if (status === "warn")  return "rgba(251,191,36,0.95)";
+  return "rgba(52,211,153,0.95)";
+}
+
+function drawMarkers() {
+  const layer = $("markerLayer");
+  layer.innerHTML = "";
+  Object.entries(state.nodes).forEach(([id, n]) => {
+    const g    = document.createElementNS("http://www.w3.org/2000/svg","g");
+    const ring = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    ring.setAttribute("cx",n.x); ring.setAttribute("cy",n.y);
+    ring.setAttribute("r","18"); ring.setAttribute("fill","rgba(2,6,23,0.75)");
+    ring.setAttribute("stroke","rgba(148,163,184,0.35)"); ring.setAttribute("stroke-width","2");
+
+    const dot  = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    dot.setAttribute("cx",n.x); dot.setAttribute("cy",n.y);
+    dot.setAttribute("r","9"); dot.setAttribute("fill", markerColor(n.status));
+
+    if (n.status === "alert") {
+      const pulse = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      pulse.setAttribute("cx",n.x); pulse.setAttribute("cy",n.y); pulse.setAttribute("r","18");
+      pulse.setAttribute("fill","none"); pulse.setAttribute("stroke","rgba(248,113,133,0.6)");
+      pulse.setAttribute("stroke-width","3");
+      pulse.innerHTML = `<animate attributeName="r" from="18" to="34" dur="1.2s" repeatCount="indefinite"/>
+                         <animate attributeName="opacity" from="0.8" to="0" dur="1.2s" repeatCount="indefinite"/>`;
+      g.appendChild(pulse);
+    }
+
+    const lbl  = document.createElementNS("http://www.w3.org/2000/svg","text");
+    lbl.setAttribute("x",n.x+22); lbl.setAttribute("y",n.y+6);
+    lbl.setAttribute("fill","rgba(226,232,240,0.9)"); lbl.setAttribute("font-size","16");
+    lbl.textContent = id;
+
+    g.appendChild(ring); g.appendChild(dot); g.appendChild(lbl);
+    g.addEventListener("mousemove", evt => showTip(evt, id, n));
+    g.addEventListener("mouseleave", hideTip);
+    layer.appendChild(g);
+  });
+}
+
+function showTip(evt, id, n) {
+  const tip = $("mapTip");
+  tip.classList.remove("hidden");
+  $("tipTitle").textContent = `Node ${id}`;
+  $("tipBody").textContent  = `bat=${n.battery.toFixed(0)}% link=${n.link.toFixed(0)}% rssi=${n.rssi}dBm`;
+  const rect = evt.currentTarget.ownerSVGElement.getBoundingClientRect();
+  tip.style.left = (evt.clientX - rect.left + 12) + "px";
+  tip.style.top  = (evt.clientY - rect.top  + 12) + "px";
+}
+function hideTip() { $("mapTip").classList.add("hidden"); }
+
+// ── Alerts list ───────────────────────────────────────────
+function statusPill(s) {
+  if (s === "confirmed") return "bg-emerald-500/15 border-emerald-400/25 text-emerald-200";
+  if (s === "suspected") return "bg-amber-500/15 border-amber-400/25 text-amber-200";
+  return "bg-slate-500/15 border-slate-400/25 text-slate-200";
+}
+
+function renderAlerts() {
+  const el = $("alertsList");
+  if (state.alerts.length === 0) {
+    el.innerHTML = `<div class="text-sm text-slate-400">No active alerts.</div>`;
+    return;
+  }
+  el.innerHTML = "";
+  state.alerts.slice(0,6).forEach(a => {
+    const div = document.createElement("div");
+    div.className = "rounded-2xl bg-slate-950/60 border border-slate-800 p-3 alert-row-new";
+    div.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold">${a.type}</span>
+            <span class="px-2 py-1 rounded-lg text-xs border ${statusPill(a.status)}">${a.status}</span>
+          </div>
+          <div class="mt-1 text-xs text-slate-400 mono">${a.ts}</div>
+          <div class="mt-2 text-sm text-slate-200">
+            Node <span class="mono">${a.node}</span> ·
+            Fusion <span class="mono">${a.fusion.toFixed(2)}</span>
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <button class="btn-confirm px-3 py-2 rounded-xl bg-emerald-500 text-slate-950 font-medium hover:bg-emerald-400 transition text-sm"
+                  data-id="${a.id}">Confirm</button>
+          <button class="btn-clear px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-700 hover:border-slate-500 transition text-sm text-slate-200"
+                  data-id="${a.id}">Clear</button>
+        </div>
+      </div>`;
+    el.appendChild(div);
+  });
+  el.querySelectorAll(".btn-confirm").forEach(b => b.addEventListener("click", () => {
+    const a = state.alerts.find(x=>x.id===b.dataset.id);
+    if (a) { a.status="confirmed"; a.type="Confirmed"; state.confirmed++; renderAll(); }
+  }));
+  el.querySelectorAll(".btn-clear").forEach(b => b.addEventListener("click", () => {
+    state.alerts = state.alerts.filter(x=>x.id!==b.dataset.id); renderAll();
+  }));
+}
+
+// ── KPIs ──────────────────────────────────────────────────
+function renderKpis() {
+  const nodeArr = Object.values(state.nodes);
+  const total   = nodeArr.length;
+  const ok      = nodeArr.filter(n => n.link >= 80).length;
+  const okPct   = Math.round((ok / Math.max(1,total)) * 100);
+  $("kpiNodes").textContent    = `${ok}/${total}`;
+  $("kpiNodesBar").style.width = `${okPct}%`;
+  $("nodesUpdated").textContent = nowStr().slice(11,19);
+
+  const sus = state.alerts.filter(a=>a.status==="suspected").length;
+  const con = state.confirmed;
+  $("kpiAlerts").textContent    = String(sus + con);
+  $("kpiConfirmed").textContent = `Confirmed: ${con}`;
+  $("kpiSuspected").textContent = `Suspected: ${sus}`;
+  $("alertsUpdated").textContent = nowStr().slice(11,19);
+}
+
+// ── Event log table ───────────────────────────────────────
+function renderEvents() {
+  const q = $("search").value.trim().toLowerCase();
+  const f = $("filterStatus").value;
+  const tbody = $("eventsTbody");
+  const rows = state.signals.filter(e => {
+    const hit = `${e.ts} ${e.node} ${e.status}`.toLowerCase().includes(q);
+    return hit && (f === "all" || e.status === f);
+  });
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-4 text-slate-400">No matching records.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = "";
+  rows.slice(0,120).forEach(e => {
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-slate-950/40";
+    tr.innerHTML = `
+      <td class="px-4 py-3 text-slate-300 mono text-xs">${e.ts}</td>
+      <td class="px-4 py-3 text-slate-200 mono">${e.node}</td>
+      <td class="px-4 py-3 text-slate-200 mono">${e.seismic.toFixed(1)}</td>
+      <td class="px-4 py-3 text-slate-200 mono">${e.thermal.toFixed(1)}</td>
+      <td class="px-4 py-3 text-slate-200 mono font-semibold">${e.fusion.toFixed(2)}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 rounded-lg text-xs border ${statusPill(e.status)}">${e.status}</span>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── Fusion readout panel ──────────────────────────────────
+function updateFusionPanel(sig) {
+  $("readSeismic").textContent    = sig.seismic.toFixed(1);
+  $("readSeismicBar").style.width = `${sig.seismic}%`;
+  $("readThermal").textContent    = sig.thermal.toFixed(1);
+  $("readThermalBar").style.width = `${sig.thermal}%`;
+  $("readPir").textContent        = sig.pir ? "✓ DETECTED" : "✗ None";
+  $("readPir").className          = `mono text-sm font-semibold ${sig.pir ? "text-rose-300" : "text-slate-400"}`;
+  $("readFusion").textContent     = `${sig.fusion.toFixed(1)} / 100`;
+  $("readFusionBar").style.width  = `${sig.fusion}%`;
+  $("readFusionBar").className    = `h-2 rounded-full transition-all duration-700 ${
+    sig.fusion >= 65 ? "bg-rose-500" : sig.fusion >= 40 ? "bg-amber-400" : "bg-emerald-400"}`;
+  const badge = $("decisionBadge");
+  const isSus = sig.status === "suspected";
+  badge.className = `px-2 py-1 rounded-lg text-xs border ${isSus
+    ? "bg-rose-500/15 border-rose-400/25 text-rose-200"
+    : "bg-slate-500/15 border-slate-400/25 text-slate-200"}`;
+  badge.textContent = isSus ? "ALERT" : "NORMAL";
+
+  // KPI row
+  $("kpiFusion").textContent     = `${sig.fusion.toFixed(1)}`;
+  $("kpiFusionBar").style.width  = `${sig.fusion}%`;
+  $("fusionUpdated").textContent = sig.ts.slice(11,19);
+  $("kpiNode").textContent       = sig.node;
+  $("gwRssi").textContent        = `RSSI: ${sig.rssi} dBm`;
+  $("gwBatt").textContent        = `Battery: ${sig.battery.toFixed(0)}%`;
+  $("gwUpdated").textContent     = sig.ts.slice(11,19);
+}
+
+// ── Charts ────────────────────────────────────────────────
+let lineChart, barChart;
+const CHART_CFG = {
+  responsive: true,
+  plugins: { legend: { labels: { color: "#cbd5e1" } } },
+  scales: {
+    x: { ticks:{ color:"#94a3b8" }, grid:{ color:"rgba(148,163,184,0.10)" } },
+    y: { ticks:{ color:"#94a3b8" }, grid:{ color:"rgba(148,163,184,0.10)" }, suggestedMin:0, suggestedMax:100 }
+  }
+};
+
+function initCharts() {
+  lineChart = new Chart($("lineChart"), {
+    type:"line",
+    data:{
+      labels: chartLabels,
+      datasets:[
+        { label:"Seismic", data: chartSeismic, borderWidth:2, tension:0.3, borderColor:"#34d399", backgroundColor:"transparent" },
+        { label:"Thermal", data: chartThermal, borderWidth:2, tension:0.3, borderColor:"#38bdf8", backgroundColor:"transparent" },
+        { label:"Fusion",  data: chartFusion,  borderWidth:2, tension:0.3, borderColor:"#fb923c", backgroundColor:"transparent" },
+      ]
+    },
+    options: CHART_CFG
+  });
+
+  barChart = new Chart($("barChart"), {
+    type:"bar",
+    data:{
+      labels: Object.keys(state.nodes),
+      datasets:[
+        { label:"Battery (%)", data: Object.values(state.nodes).map(n=>n.battery), backgroundColor:"rgba(52,211,153,0.6)" },
+        { label:"Link (%)",    data: Object.values(state.nodes).map(n=>n.link),    backgroundColor:"rgba(56,189,248,0.6)" },
+      ]
+    },
+    options: CHART_CFG
+  });
+}
+
+function pushChartPoint(sig) {
+  chartLabels.shift();  chartLabels.push(sig.ts.slice(11,19));
+  chartSeismic.shift(); chartSeismic.push(sig.seismic);
+  chartThermal.shift(); chartThermal.push(sig.thermal);
+  chartFusion.shift();  chartFusion.push(sig.fusion);
+  lineChart.data.labels   = chartLabels;
+  lineChart.data.datasets[0].data = chartSeismic;
+  lineChart.data.datasets[1].data = chartThermal;
+  lineChart.data.datasets[2].data = chartFusion;
+  lineChart.update("none");
+
+  barChart.data.labels = Object.keys(state.nodes);
+  barChart.data.datasets[0].data = Object.values(state.nodes).map(n=>n.battery);
+  barChart.data.datasets[1].data = Object.values(state.nodes).map(n=>n.link);
+  barChart.update("none");
+  $("chartUpdated").textContent = sig.ts.slice(11,19);
+}
+
+// ── Intrusion Popup ───────────────────────────────────────
+function showIntrusionPopup(d) {
+  $("popNode").textContent    = d.node;
+  $("popFusion").textContent  = `${d.fusion.toFixed(1)} / 100`;
+  $("popSeismic").textContent = d.seismic.toFixed(1);
+  $("popThermal").textContent = d.thermal.toFixed(1);
+  $("popPir").textContent     = d.pir ? "✓ Detected" : "✗ None";
+  $("popTs").textContent      = d.ts;
+  $("popBar").style.width     = `${clamp(d.fusion,0,100)}%`;
+  $("alertPopup").classList.add("visible");
+}
+
+function hidePopup() { $("alertPopup").classList.remove("visible"); }
+
+$("popDismiss").addEventListener("click", hidePopup);
+$("popConfirm").addEventListener("click", () => {
+  state.confirmed++;
+  hidePopup();
+  renderAll();
+});
+$("alertPopup").addEventListener("click", e => { if (e.target === $("alertPopup")) hidePopup(); });
+
+// ── Render all ────────────────────────────────────────────
+function renderAll() {
+  drawMarkers();
+  renderAlerts();
+  renderEvents();
+  renderKpis();
+}
+
+// ── SSE connection ────────────────────────────────────────
+function connectSSE() {
+  const es = new EventSource("{{ url_for('stream') }}");
+
+  es.onopen = () => {
+    $("sseStatus").className = "h-2 w-2 rounded-full bg-emerald-400 transition-colors";
+    $("sseLabel").textContent = "Live";
+  };
+
+  es.onmessage = evt => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+
+    if (msg.event === "init") {
+      // Hydrate from server history
+      if (msg.data.nodes)   state.nodes   = msg.data.nodes;
+      if (msg.data.signals) {
+        state.signals = msg.data.signals;
+        // Seed charts with recent history
+        msg.data.signals.slice(-WINDOW).forEach(s => {
+          chartLabels.shift();  chartLabels.push(s.ts.slice(11,19));
+          chartSeismic.shift(); chartSeismic.push(s.seismic);
+          chartThermal.shift(); chartThermal.push(s.thermal);
+          chartFusion.shift();  chartFusion.push(s.fusion);
+        });
+        if (lineChart) {
+          lineChart.data.labels = chartLabels;
+          lineChart.data.datasets[0].data = chartSeismic;
+          lineChart.data.datasets[1].data = chartThermal;
+          lineChart.data.datasets[2].data = chartFusion;
+          lineChart.update("none");
+        }
+        if (state.signals.length) updateFusionPanel(state.signals[state.signals.length-1]);
+      }
+      renderAll();
+      return;
+    }
+
+    if (msg.event === "signal") {
+      const sig = msg.data;
+      // Update node registry
+      if (sig.nodes) state.nodes = sig.nodes;
+      // Append to signals
+      state.signals.unshift(sig);
+      if (state.signals.length > 200) state.signals.pop();
+      // Update alert queue if suspected
+      if (sig.status === "suspected") {
+        sig.type = "Suspected";
+        state.alerts.unshift(sig);
+        if (state.alerts.length > 20) state.alerts.pop();
+        state.suspected++;
+      }
+      updateFusionPanel(sig);
+      pushChartPoint(sig);
+      renderAll();
+      return;
+    }
+
+    if (msg.event === "intrusion") {
+      showIntrusionPopup(msg.data);
+    }
+  };
+
+  es.onerror = () => {
+    $("sseStatus").className  = "h-2 w-2 rounded-full bg-rose-400 transition-colors";
+    $("sseLabel").textContent = "Reconnecting…";
+    setTimeout(connectSSE, 4000);
+    es.close();
+  };
+}
+
+// ── Toolbar actions ───────────────────────────────────────
+$("btnClearAlerts").addEventListener("click", () => {
+  state.alerts = [];
+  Object.values(state.nodes).forEach(n => { if (n.status==="alert") n.status="ok"; });
+  renderAll();
+});
+
+$("search").addEventListener("input", renderEvents);
+$("filterStatus").addEventListener("change", renderEvents);
+
+$("btnExport").addEventListener("click", () => {
+  const header = "time,node,seismic,thermal,pir,fusion,status";
+  const rows = state.signals.map(s =>
+    `"${s.ts}","${s.node}",${s.seismic},${s.thermal},${s.pir},${s.fusion},"${s.status}"`
+  );
+  const blob = new Blob([[header,...rows].join("\n")], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "eleguard_events.csv";
+  a.click();
+});
+
+$("btnCenter").addEventListener("click", () => {
+  const b = $("boundaryPath");
+  b.style.stroke = "rgba(56,189,248,0.9)";
+  setTimeout(() => b.style.stroke = "rgba(251,191,36,0.85)", 600);
+});
+
+// ── Boot ──────────────────────────────────────────────────
+initCharts();
+renderAll();
+connectSSE();
+</script>
 {% endblock %}
